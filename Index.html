@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Pi Master - Full & Final</title>
+    <style>
+        :root { --accent: #ff0000; --gold: #ffd700; --violet: #ee82ee; }
+        body { background: #000 radial-gradient(circle, #250000 0%, #000 100%); color: #fff; text-align: center; font-family: sans-serif; margin: 0; padding: 0; overflow: hidden; touch-action: manipulation; }
+        
+        /* شاشة البداية */
+        #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .logo-container { position: relative; width: 130px; height: 130px; margin-bottom: 15px; background: #111; border: 2px solid var(--accent); border-radius: 25px; box-shadow: 0 0 25px var(--accent); }
+        .pi-symbol { font-size: 70px; color: var(--violet); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .shape-icon { position: absolute; font-size: 18px; padding: 4px; border-radius: 6px; }
+        #game-title { font-size: 26px; font-weight: bold; color: var(--gold); margin-bottom: 25px; text-shadow: 0 0 10px gold; }
+        
+        .btn { padding: 12px 20px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; width: 85%; max-width: 280px; display: block; }
+        .btn.start { background: var(--accent); color: white; font-size: 20px; box-shadow: 0 0 15px var(--accent); }
+        .btn.rank-btn { background: #222; color: var(--gold); border: 1px solid var(--gold); }
+
+        /* واجهة اللعب */
+        #header-info { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(20,0,0,0.9); border-bottom: 1px solid var(--accent); }
+        .header-item { font-weight: bold; font-size: 13px; cursor: pointer; }
+        #game-container { position: relative; width: 95vw; max-width: 380px; height: 380px; margin: 10px auto; background: rgba(0,0,0,0.4); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,0,0,0.2); }
+        
+        .tile { position: absolute; width: 55px; height: 55px; background: linear-gradient(145deg, #b30000, #ff1a1a); border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; font-size: 26px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px #000; z-index: 10; }
+        .tile.locked { filter: brightness(0.3) opacity(0.5); pointer-events: none; }
+        
+        #dock { display: flex; gap: 5px; width: 92vw; max-width: 340px; height: 65px; background: rgba(30,0,0,0.9); margin: 10px auto; border-radius: 15px; padding: 5px; border: 1px solid var(--accent); justify-content: center; align-items: center; }
+        .slot { width: 42px; height: 42px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+
+        /* أزرار الأنقاض (المساعدة) */
+        .controls { display: flex; justify-content: center; gap: 8px; margin: 10px auto; max-width: 380px; }
+        .icon-btn { flex: 1; height: 55px; background: #111; border: 1px solid var(--accent); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        .icon-label { font-size: 9px; color: var(--accent); margin-top: 3px; font-weight: bold; }
+        
+        .overlay { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 25px; border-radius: 25px; z-index: 5000; border: 2px solid var(--accent); box-shadow: 0 0 50px #ff0000; min-width: 260px; }
+        .rank-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; color: gold; }
+    </style>
+</head>
+<body>
+    <audio id="bgMusic" loop><source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" type="audio/mpeg"></audio>
+
+    <div id="start-screen">
+        <div class="logo-container">
+            <div class="pi-symbol">π</div>
+            <div class="shape-icon" style="top:5px; left:5px; background:var(--accent);">⏺️</div>
+            <div class="shape-icon" style="top:5px; right:5px; background:#000; color:var(--accent);">🔼</div>
+            <div class="shape-icon" style="bottom:5px; left:5px; background:#000; color:var(--accent);">⏹️</div>
+            <div class="shape-icon" style="bottom:5px; right:5px; background:var(--accent); color:var(--gold);">⭐</div>
+        </div>
+        <div id="game-title">Golden Pi Master</div>
+        <button class="btn start" onclick="startGame()">START GAME</button>
+        <button class="btn rank-btn" onclick="toggleOverlay('rank-msg')">RANKING 🏆</button>
+    </div>
+
+    <div id="header-info">
+        <div class="header-item" onclick="toggleOverlay('settings-msg')">⚙️ SETTINGS</div>
+        <div class="header-item" style="color: gold;">🏆 LVL: <span id="lvl-num">1</span></div>
+        <div class="header-item" style="color:var(--accent);"><span id="pi-total">0.00</span> Pi</div>
+    </div>
+
+    <div id="game-container"></div>
+    <div id="dock"><div class="slot" id="s1"></div><div class="slot" id="s2"></div><div class="slot" id="s3"></div><div class="slot" id="s4"></div><div class="slot" id="s5">🔒</div></div>
+
+    <div class="controls">
+        <div class="icon-btn" onclick="pay('hint')">💡<span class="icon-label">0.01 Pi</span></div>
+        <div class="icon-btn" onclick="pay('shuffle')">🔄<span class="icon-label">0.01 Pi</span></div>
+        <div class="icon-btn" onclick="pay('undo')">↩️<span class="icon-label">0.01 Pi</span></div>
+        <div class="icon-btn" onclick="pay('slot')">🔓<span class="icon-label">0.01 Pi</span></div>
+    </div>
+
+    <div id="settings-msg" class="overlay">
+        <h3>SETTINGS</h3>
+        <button id="m-btn" class="btn" style="background:#00ff88; color:#000; width:100%" onclick="toggleMusic()">MUSIC: ON</button>
+        <button id="s-btn" class="btn" style="background:#00ff88; color:#000; width:100%" onclick="toggleSfx()">SFX: ON</button>
+        <button class="btn" style="background:#333; color:white; width:100%" onclick="toggleOverlay('settings-msg')">BACK</button>
+    </div>
+
+    <div id="rank-msg" class="overlay">
+        <h3 style="color:gold">🏆 GLOBAL RANKING</h3>
+        <div class="rank-item"><span>1. Pioneero_DZ</span> <span>Lvl 99</span></div>
+        <div class="rank-item"><span>2. Pi_Chef</span> <span>Lvl 88</span></div>
+        <button class="btn" style="background:var(--accent); color:white; width:100%" onclick="toggleOverlay('rank-msg')">CLOSE</button>
+    </div>
+
+    <div id="win-msg" class="overlay"><h2>LEVEL CLEAR!</h2><button class="btn start" style="width:100%" onclick="nextLevel()">NEXT LEVEL</button></div>
+    <div id="lose-msg" class="overlay"><h2>GAME OVER</h2><button class="btn" style="background:#444; color:white; width:100%" onclick="initLevel()">RETRY</button></div>
+
+    <script>
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const bgMusic = document.getElementById('bgMusic');
+        let musicStarted = false, isMusicOn = true, isSfxOn = true, currentLevel = 1, totalPi = 0, dockItems = [], totalSlots = 4;
+
+        function playSound(freq, type = 'sine', duration = 0.1) {
+            if (!isSfxOn) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, now);
+            g.gain.setValueAtTime(0.1, now); g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+            osc.connect(g); g.connect(audioCtx.destination);
+            osc.start(); osc.stop(now + duration);
+        }
+
+        function toggleOverlay(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
+        
+        function startGame() { 
+            document.getElementById('start-screen').style.display = 'none';
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (!musicStarted && isMusicOn) { bgMusic.volume = 0.1; bgMusic.play(); musicStarted = true; }
+            initLevel(); 
+        }
+
+        function initLevel() {
+            const board = document.getElementById('game-container');
+            board.innerHTML = ''; dockItems = []; 
+            document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none');
+            document.getElementById('lvl-num').innerText = currentLevel;
+            renderDock();
+            const symbols = ['⏺️', '🔼', '⭐', '💎', '🍀', '🍎', '🔔', '🔥', '⚡', '🌈'];
+            let symCount = 3 + Math.floor((currentLevel - 1) / 10);
+            if(symCount > symbols.length) symCount = symbols.length;
+            let data = [];
+            for(let i=0; i<symCount; i++) for(let j=0; j<3; j++) data.push(symbols[i]);
+            data.sort(() => Math.random() - 0.5);
+            data.forEach((s, i) => {
+                const t = document.createElement('div');
+                t.className = 'tile'; t.innerText = s;
+                t.style.top = (20 + Math.random() * 290) + 'px'; t.style.left = (20 + Math.random() * 280) + 'px';
+                t.style.zIndex = i; t.onclick = function() { pick(this); };
+                board.appendChild(t);
+            });
+            updateLayers();
+        }
+
+        function pick(el) {
+            if (el.classList.contains('locked') || el.style.display === 'none') return;
+            if (dockItems.length >= totalSlots) return;
+            playSound(440, 'sine', 0.1); 
+            el.style.display = 'none';
+            dockItems.push(el.innerText);
+            renderDock();
+            updateLayers(); 
+            let counts = {};
+            dockItems.forEach(x => counts[x] = (counts[x] || 0) + 1);
+            for(let s in counts) {
+                if(counts[s] === 3) {
+                    setTimeout(() => {
+                        playSound(880, 'triangle', 0.2);
+                        dockItems = dockItems.filter(x => x !== s);
+                        renderDock();
+                        checkWin();
+                    }, 200);
+                    return;
+                }
+            }
+            if (dockItems.length === totalSlots) setTimeout(() => { playSound(150, 'sawtooth', 0.5); toggleOverlay('lose-msg'); }, 400);
+        }
+
+        function checkWin() {
+            const tilesVisible = Array.from(document.querySelectorAll('.tile')).filter(t => t.style.display !== 'none');
+            if (tilesVisible.length === 0 && dockItems.length === 0) {
+                playSound(1000, 'sine', 0.4);
+                toggleOverlay('win-msg');
+            }
+        }
+
+        function updateLayers() {
+            const tiles = Array.from(document.querySelectorAll('.tile')).filter(t => t.style.display !== 'none');
+            tiles.forEach(t1 => {
+                let isUnder = tiles.some(t2 => {
+                    if (t1 === t2) return false;
+                    let r1 = t1.getBoundingClientRect(), r2 = t2.getBoundingClientRect();
+                    return (parseInt(t2.style.zIndex) > parseInt(t1.style.zIndex) && Math.abs(r1.left - r2.left) < 45 && Math.abs(r1.top - r2.top) < 45);
+                });
+                if(isUnder) t1.classList.add('locked'); else t1.classList.remove('locked');
+            });
+        }
+
+        function renderDock() { for(let i=1; i<=5; i++) { let s = document.getElementById('s'+i); s.innerText = (i <= totalSlots) ? (dockItems[i-1] || '') : "🔒"; } }
+        function pay(type) { if(confirm("Pay 0.01 Pi?")) { totalPi += 0.01; document.getElementById('pi-total').innerText = totalPi.toFixed(2); if(type==='slot'){totalSlots=5;renderDock();} else initLevel(); } }
+        function nextLevel() { currentLevel++; initLevel(); }
+        function toggleMusic() { isMusicOn = !isMusicOn; isMusicOn ? bgMusic.play() : bgMusic.pause(); document.getElementById('m-btn').innerText = isMusicOn ? "MUSIC: ON" : "MUSIC: OFF"; }
+        function toggleSfx() { isSfxOn = !isSfxOn; document.getElementById('s-btn').innerText = isSfxOn ? "SFX: ON" : "SFX: OFF"; }
+    </script>
+</body>
+</html>
