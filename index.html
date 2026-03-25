@@ -2,13 +2,14 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Golden Pi Master - Full & Final</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Golden Pi Master - Official</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <script src="https://socialchain.app/static/js/ads.js"></script>
     <style>
         :root { --accent: #ff0000; --gold: #ffd700; --violet: #ee82ee; }
         body { background: #000 radial-gradient(circle, #250000 0%, #000 100%); color: #fff; text-align: center; font-family: sans-serif; margin: 0; padding: 0; overflow: hidden; touch-action: manipulation; }
         
-        /* شاشة البداية */
         #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .logo-container { position: relative; width: 130px; height: 130px; margin-bottom: 15px; background: #111; border: 2px solid var(--accent); border-radius: 25px; box-shadow: 0 0 25px var(--accent); }
         .pi-symbol { font-size: 70px; color: var(--violet); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
@@ -19,7 +20,6 @@
         .btn.start { background: var(--accent); color: white; font-size: 20px; box-shadow: 0 0 15px var(--accent); }
         .btn.rank-btn { background: #222; color: var(--gold); border: 1px solid var(--gold); }
 
-        /* واجهة اللعب */
         #header-info { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(20,0,0,0.9); border-bottom: 1px solid var(--accent); }
         .header-item { font-weight: bold; font-size: 13px; cursor: pointer; }
         #game-container { position: relative; width: 95vw; max-width: 380px; height: 380px; margin: 10px auto; background: rgba(0,0,0,0.4); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,0,0,0.2); }
@@ -30,13 +30,11 @@
         #dock { display: flex; gap: 5px; width: 92vw; max-width: 340px; height: 65px; background: rgba(30,0,0,0.9); margin: 10px auto; border-radius: 15px; padding: 5px; border: 1px solid var(--accent); justify-content: center; align-items: center; }
         .slot { width: 42px; height: 42px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
 
-        /* أزرار الأنقاض (المساعدة) */
         .controls { display: flex; justify-content: center; gap: 8px; margin: 10px auto; max-width: 380px; }
         .icon-btn { flex: 1; height: 55px; background: #111; border: 1px solid var(--accent); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
         .icon-label { font-size: 9px; color: var(--accent); margin-top: 3px; font-weight: bold; }
         
         .overlay { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 25px; border-radius: 25px; z-index: 5000; border: 2px solid var(--accent); box-shadow: 0 0 50px #ff0000; min-width: 260px; }
-        .rank-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #333; color: gold; }
     </style>
 </head>
 <body>
@@ -45,18 +43,14 @@
     <div id="start-screen">
         <div class="logo-container">
             <div class="pi-symbol">π</div>
-            <div class="shape-icon" style="top:5px; left:5px; background:var(--accent);">⏺️</div>
-            <div class="shape-icon" style="top:5px; right:5px; background:#000; color:var(--accent);">🔼</div>
-            <div class="shape-icon" style="bottom:5px; left:5px; background:#000; color:var(--accent);">⏹️</div>
-            <div class="shape-icon" style="bottom:5px; right:5px; background:var(--accent); color:var(--gold);">⭐</div>
         </div>
         <div id="game-title">Golden Pi Master</div>
-        <button class="btn start" onclick="startGame()">START GAME</button>
-        <button class="btn rank-btn" onclick="toggleOverlay('rank-msg')">RANKING 🏆</button>
+        <p id="auth-status" style="color:var(--gold); margin-bottom:10px;">Checking Pi Wallet...</p>
+        <button id="start-btn" class="btn start" onclick="startGame()" style="display:none;">START GAME</button>
     </div>
 
     <div id="header-info">
-        <div class="header-item" onclick="toggleOverlay('settings-msg')">⚙️ SETTINGS</div>
+        <div class="header-item" id="user-display">Guest</div>
         <div class="header-item" style="color: gold;">🏆 LVL: <span id="lvl-num">1</span></div>
         <div class="header-item" style="color:var(--accent);"><span id="pi-total">0.00</span> Pi</div>
     </div>
@@ -71,27 +65,39 @@
         <div class="icon-btn" onclick="pay('slot')">🔓<span class="icon-label">0.01 Pi</span></div>
     </div>
 
-    <div id="settings-msg" class="overlay">
-        <h3>SETTINGS</h3>
-        <button id="m-btn" class="btn" style="background:#00ff88; color:#000; width:100%" onclick="toggleMusic()">MUSIC: ON</button>
-        <button id="s-btn" class="btn" style="background:#00ff88; color:#000; width:100%" onclick="toggleSfx()">SFX: ON</button>
-        <button class="btn" style="background:#333; color:white; width:100%" onclick="toggleOverlay('settings-msg')">BACK</button>
-    </div>
-
-    <div id="rank-msg" class="overlay">
-        <h3 style="color:gold">🏆 GLOBAL RANKING</h3>
-        <div class="rank-item"><span>1. Pioneero_DZ</span> <span>Lvl 99</span></div>
-        <div class="rank-item"><span>2. Pi_Chef</span> <span>Lvl 88</span></div>
-        <button class="btn" style="background:var(--accent); color:white; width:100%" onclick="toggleOverlay('rank-msg')">CLOSE</button>
-    </div>
-
     <div id="win-msg" class="overlay"><h2>LEVEL CLEAR!</h2><button class="btn start" style="width:100%" onclick="nextLevel()">NEXT LEVEL</button></div>
     <div id="lose-msg" class="overlay"><h2>GAME OVER</h2><button class="btn" style="background:#444; color:white; width:100%" onclick="initLevel()">RETRY</button></div>
 
     <script>
+        const Pi = window.Pi;
+        // ربط الـ API Key الجديد
+        Pi.init({ version: "2.0", sandbox: false });
+
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const bgMusic = document.getElementById('bgMusic');
         let musicStarted = false, isMusicOn = true, isSfxOn = true, currentLevel = 1, totalPi = 0, dockItems = [], totalSlots = 4;
+
+        async function authenticateUser() {
+            try {
+                const auth = await Pi.authenticate(['username'], (onIncompletePayment) => {});
+                document.getElementById('user-display').innerText = auth.user.username;
+                document.getElementById('auth-status').innerText = "Welcome, " + auth.user.username;
+                showAd(); // إظهار إعلان عند الدخول
+            } catch (err) {
+                document.getElementById('auth-status').innerText = "Guest Mode";
+            }
+            document.getElementById('start-btn').style.display = 'block';
+        }
+
+        async function showAd() {
+            try {
+                await Pi.Ads.showAd({
+                    adUnitId: 'adunit-789', // كود تجريبي ستحصل على الرسمي لاحقاً
+                    onAdFinished: (info) => console.log("Ad success"),
+                    onAdError: (error) => console.log("Ad error")
+                });
+            } catch (err) { console.log("Ads not available"); }
+        }
 
         function playSound(freq, type = 'sine', duration = 0.1) {
             if (!isSfxOn) return;
@@ -104,7 +110,7 @@
             osc.start(); osc.stop(now + duration);
         }
 
-        function toggleOverlay(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
+        function toggleOverlay(id) { document.getElementById(id).style.display = (document.getElementById(id).style.display === 'block') ? 'none' : 'block'; }
         
         function startGame() { 
             document.getElementById('start-screen').style.display = 'none';
@@ -120,7 +126,7 @@
             document.getElementById('lvl-num').innerText = currentLevel;
             renderDock();
             const symbols = ['⏺️', '🔼', '⭐', '💎', '🍀', '🍎', '🔔', '🔥', '⚡', '🌈'];
-            let symCount = 3 + Math.floor((currentLevel - 1) / 10);
+            let symCount = 3 + Math.floor((currentLevel - 1) / 5); // زيادة الصعوبة
             if(symCount > symbols.length) symCount = symbols.length;
             let data = [];
             for(let i=0; i<symCount; i++) for(let j=0; j<3; j++) data.push(symbols[i]);
@@ -128,7 +134,9 @@
             data.forEach((s, i) => {
                 const t = document.createElement('div');
                 t.className = 'tile'; t.innerText = s;
-                t.style.top = (20 + Math.random() * 290) + 'px'; t.style.left = (20 + Math.random() * 280) + 'px';
+                // ضبط المواقع لضمان عدم الخروج
+                t.style.top = (10 + Math.random() * (board.clientHeight - 65)) + 'px'; 
+                t.style.left = (10 + Math.random() * (board.clientWidth - 65)) + 'px';
                 t.style.zIndex = i; t.onclick = function() { pick(this); };
                 board.appendChild(t);
             });
@@ -163,6 +171,7 @@
             const tilesVisible = Array.from(document.querySelectorAll('.tile')).filter(t => t.style.display !== 'none');
             if (tilesVisible.length === 0 && dockItems.length === 0) {
                 playSound(1000, 'sine', 0.4);
+                showAd(); // إعلان عند الفوز
                 toggleOverlay('win-msg');
             }
         }
@@ -182,8 +191,9 @@
         function renderDock() { for(let i=1; i<=5; i++) { let s = document.getElementById('s'+i); s.innerText = (i <= totalSlots) ? (dockItems[i-1] || '') : "🔒"; } }
         function pay(type) { if(confirm("Pay 0.01 Pi?")) { totalPi += 0.01; document.getElementById('pi-total').innerText = totalPi.toFixed(2); if(type==='slot'){totalSlots=5;renderDock();} else initLevel(); } }
         function nextLevel() { currentLevel++; initLevel(); }
-        function toggleMusic() { isMusicOn = !isMusicOn; isMusicOn ? bgMusic.play() : bgMusic.pause(); document.getElementById('m-btn').innerText = isMusicOn ? "MUSIC: ON" : "MUSIC: OFF"; }
-        function toggleSfx() { isSfxOn = !isSfxOn; document.getElementById('s-btn').innerText = isSfxOn ? "SFX: ON" : "SFX: OFF"; }
+
+        // بدء التحقق فور فتح اللعبة
+        authenticateUser();
     </script>
 </body>
 </html>
