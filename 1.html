@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Golden Pi Master - Official</title>
+    <script src="https://sdk.minepi.com/pi-sdk.js"></script>
+    <style>
+        :root { --accent: #ff0000; --gold: #ffd700; --violet: #ee82ee; }
+        body { background: #000 radial-gradient(circle, #250000 0%, #000 100%); color: #fff; text-align: center; font-family: sans-serif; margin: 0; padding: 0; overflow: hidden; touch-action: manipulation; height: 100vh; }
+        
+        /* شاشة البداية */
+        #start-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .logo-container { position: relative; width: 120px; height: 120px; margin-bottom: 15px; background: #111; border: 2px solid var(--accent); border-radius: 25px; box-shadow: 0 0 25px var(--accent); }
+        .pi-symbol { font-size: 60px; color: var(--violet); position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #game-title { font-size: 24px; font-weight: bold; color: var(--gold); margin-bottom: 20px; text-shadow: 0 0 10px gold; }
+        
+        .btn { padding: 12px 20px; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; text-transform: uppercase; width: 85%; max-width: 280px; display: block; }
+        .btn.start { background: var(--accent); color: white; font-size: 20px; box-shadow: 0 0 15px var(--accent); }
+
+        /* واجهة اللعب - تحسين القياسات */
+        #header-info { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(20,0,0,0.9); border-bottom: 1px solid var(--accent); height: 40px; }
+        #game-container { position: relative; width: 95vw; max-width: 360px; height: 60vh; margin: 5px auto; background: rgba(0,0,0,0.4); border-radius: 20px; overflow: hidden; border: 1px solid rgba(255,0,0,0.2); }
+        
+        .tile { position: absolute; width: 50px; height: 50px; background: linear-gradient(145deg, #b30000, #ff1a1a); border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px #000; z-index: 10; transition: transform 0.1s; }
+        .tile.locked { filter: brightness(0.3) opacity(0.7); pointer-events: none; }
+        
+        #dock { display: flex; gap: 4px; width: 95vw; max-width: 340px; height: 60px; background: rgba(30,0,0,0.9); margin: 5px auto; border-radius: 15px; padding: 5px; border: 1px solid var(--accent); justify-content: center; align-items: center; }
+        .slot { width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+
+        .controls { display: flex; justify-content: center; gap: 5px; margin: 5px auto; width: 95vw; }
+        .icon-btn { flex: 1; height: 50px; background: #111; border: 1px solid var(--accent); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        
+        .overlay { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111; padding: 20px; border-radius: 25px; z-index: 5000; border: 2px solid var(--accent); box-shadow: 0 0 50px #ff0000; width: 80%; max-width: 300px; }
+    </style>
+</head>
+<body>
+    <audio id="bgMusic" loop><source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3" type="audio/mpeg"></audio>
+
+    <div id="start-screen">
+        <div class="logo-container">
+            <div class="pi-symbol">π</div>
+        </div>
+        <div id="game-title">Golden Pi Master</div>
+        <p id="user-welcome" style="color:var(--gold); margin-bottom:10px;">جاري التحقق من Pi...</p>
+        <button id="start-btn" class="btn start" onclick="startGame()" style="display:none;">START GAME</button>
+    </div>
+
+    <div id="header-info">
+        <div class="header-item" style="font-size:10px;" id="username-display">Guest</div>
+        <div class="header-item" style="color: gold;">🏆 LVL: <span id="lvl-num">1</span></div>
+        <div class="header-item" style="color:var(--accent); font-size:12px;"><span id="pi-total">0.00</span> Pi</div>
+    </div>
+
+    <div id="game-container"></div>
+    <div id="dock"><div class="slot" id="s1"></div><div class="slot" id="s2"></div><div class="slot" id="s3"></div><div class="slot" id="s4"></div><div class="slot" id="s5">🔒</div></div>
+
+    <div class="controls">
+        <div class="icon-btn" onclick="pay('hint')">💡<span style="font-size:8px;">0.01 Pi</span></div>
+        <div class="icon-btn" onclick="pay('shuffle')">🔄<span style="font-size:8px;">0.01 Pi</span></div>
+        <div class="icon-btn" onclick="pay('undo')">↩️<span style="font-size:8px;">0.01 Pi</span></div>
+    </div>
+
+    <div id="win-msg" class="overlay"><h2>LEVEL CLEAR!</h2><button class="btn start" style="width:100%" onclick="nextLevel()">NEXT LEVEL</button></div>
+    <div id="lose-msg" class="overlay"><h2>GAME OVER</h2><button class="btn" style="background:#444; color:white; width:100%" onclick="initLevel()">RETRY</button></div>
+
+    <script>
+        const Pi = window.Pi;
+        Pi.init({ version: "2.0", sandbox: false });
+
+        let currentLevel = 1, totalPi = 0, dockItems = [], totalSlots = 4;
+        const bgMusic = document.getElementById('bgMusic');
+
+        // تسجيل الدخول بـ Pi
+        async function authPi() {
+            try {
+                const auth = await Pi.authenticate(['username'], () => {});
+                document.getElementById('username-display').innerText = auth.user.username;
+                document.getElementById('user-welcome').innerText = "مرحباً " + auth.user.username;
+            } catch (e) {
+                document.getElementById('user-welcome').innerText = "العب كضيف";
+            }
+            document.getElementById('start-btn').style.display = "block";
+        }
+
+        function toggleOverlay(id) { 
+            const el = document.getElementById(id); 
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block'; 
+        }
+        
+        function startGame() { 
+            document.getElementById('start-screen').style.display = 'none';
+            bgMusic.volume = 0.1; bgMusic.play();
+            initLevel(); 
+        }
+
+        function initLevel() {
+            const board = document.getElementById('game-container');
+            board.innerHTML = ''; dockItems = []; 
+            document.querySelectorAll('.overlay').forEach(el => el.style.display = 'none');
+            document.getElementById('lvl-num').innerText = currentLevel;
+            renderDock();
+
+            const symbols = ['⏺️', '🔼', '⭐', '💎', '🍀', '🍎', '🔔', '🔥', '⚡', '🌈'];
+            // زيادة الصعوبة: عدد الأشكال يزيد مع المستويات
+            let symCount = 3 + Math.floor(currentLevel / 3); 
+            if(symCount > symbols.length) symCount = symbols.length;
+            
+            let data = [];
+            for(let i=0; i<symCount; i++) {
+                for(let j=0; j<3; j++) data.push(symbols[i]);
+            }
+            data.sort(() => Math.random() - 0.5);
+
+            data.forEach((s, i) => {
+                const t = document.createElement('div');
+                t.className = 'tile'; t.innerText = s;
+                // تعديل المواقع لضمان بقائها داخل الحاوية
+                t.style.top = (10 + Math.random() * (board.clientHeight - 60)) + 'px'; 
+                t.style.left = (10 + Math.random() * (board.clientWidth - 60)) + 'px';
+                t.style.zIndex = i; 
+                t.onclick = function() { pick(this); };
+                board.appendChild(t);
+            });
+            updateLayers();
+        }
+
+        function pick(el) {
+            if (el.classList.contains('locked') || el.style.display === 'none') return;
+            if (dockItems.length >= totalSlots) return;
+            el.style.display = 'none';
+            dockItems.push(el.innerText);
+            renderDock();
+            updateLayers(); 
+            
+            let counts = {};
+            dockItems.forEach(x => counts[x] = (counts[x] || 0) + 1);
+            for(let s in counts) {
+                if(counts[s] === 3) {
+                    setTimeout(() => {
+                        dockItems = dockItems.filter(x => x !== s);
+                        renderDock();
+                        checkWin();
+                    }, 200);
+                    return;
+                }
+            }
+            if (dockItems.length === totalSlots) {
+                setTimeout(() => { toggleOverlay('lose-msg'); }, 400);
+            }
+        }
+
+        function checkWin() {
+            const tilesVisible = Array.from(document.querySelectorAll('.tile')).filter(t => t.style.display !== 'none');
+            if (tilesVisible.length === 0 && dockItems.length === 0) {
+                toggleOverlay('win-msg');
+            }
+        }
+
+        function updateLayers() {
+            const tiles = Array.from(document.querySelectorAll('.tile')).filter(t => t.style.display !== 'none');
+            tiles.forEach(t1 => {
+                let isUnder = tiles.some(t2 => {
+                    if (t1 === t2) return false;
+                    let r1 = t1.getBoundingClientRect(), r2 = t2.getBoundingClientRect();
+                    return (parseInt(t2.style.zIndex) > parseInt(t1.style.zIndex) && 
+                            Math.abs(r1.left - r2.left) < 40 && Math.abs(r1.top - r2.top) < 40);
+                });
+                if(isUnder) t1.classList.add('locked'); else t1.classList.remove('locked');
+            });
+        }
+
+        function renderDock() { 
+            for(let i=1; i<=5; i++) { 
+                let s = document.getElementById('s'+i); 
+                s.innerText = (i <= totalSlots) ? (dockItems[i-1] || '') : "🔒"; 
+            } 
+        }
+
+        function pay(type) { 
+            if(confirm("Pay 0.01 Pi to use this power?")) { 
+                totalPi += 0.01; 
+                document.getElementById('pi-total').innerText = totalPi.toFixed(2); 
+                initLevel(); 
+            } 
+        }
+
+        function nextLevel() { currentLevel++; initLevel(); }
+
+        // تشغيل التحقق عند فتح الصفحة
+        authPi();
+    </script>
+</body>
+</html>
